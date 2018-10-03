@@ -5,12 +5,10 @@ import java.util.List;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import com.adamkorzeniak.catalog.exception.ParentOfItselfException;
-import com.adamkorzeniak.catalog.exception.ParentTaskNotFoundException;
+import com.adamkorzeniak.catalog.config.exception.ParentOfItselfException;
 import com.adamkorzeniak.catalog.task.model.Task;
-import com.adamkorzeniak.catalog.task.model.TaskDTO;
-import com.adamkorzeniak.catalog.task.model.TaskSearch;
 import com.adamkorzeniak.catalog.task.repository.TaskRepository;
 
 @Service("taskService")
@@ -19,104 +17,63 @@ public class TaskServiceImpl implements TaskService {
 	@Autowired
 	private TaskRepository taskRepository;
 
-	public TaskDTO create(TaskDTO taskDTO) {
-		Task task = convertDTOToEntity(taskDTO);
-		task = taskRepository.save(task);
-		return convertEntityToDTO(task);
+	public Task create(Task task) {
+		return taskRepository.save(task);
 	}
 
-	public List<TaskDTO> findAllTasks() {
-		List<Task> tasks = taskRepository.findAll();
-		return convertTaskstoDTOs(tasks);
+	public List<Task> findAllTasks() {
+		return taskRepository.findAll();
 	}
 
 	@Override
-	public TaskDTO findTask(long taskId) {
-		Task task = taskRepository.getOne(taskId);
-		return convertEntityToDTO(task);
+	public List<Task> findDescendants(long parentTaskId) {
+		if (parentTaskId < 1) {
+			return taskRepository.findByParentTaskIsNull();
+		}
+		Task parentTask = taskRepository.getOne(parentTaskId);
+		if (parentTask!= null) {
+			return taskRepository.findByParentTask(taskRepository.getOne(parentTaskId));
+		} else {
+			return new ArrayList<>();
+		}
 	}
 
 	@Override
-	public TaskDTO updateTask(TaskDTO taskDTO, long taskId) {
+	public Task findTask(long taskId) {
+		return taskRepository.getOne(taskId);
+	}
+
+	@Override
+	public Task updateTask(long taskId, Task task) {
 		
 		Task currentTask = taskRepository.getOne(taskId);
-		if (currentTask == null) {
-			return null;
-		}
-		currentTask.update(convertDTOToEntity(taskDTO));
+		currentTask.update(task);
 		if (currentTask.getParentTask() != null && currentTask.getId().equals(currentTask.getParentTask().getId())) {
 			throw new ParentOfItselfException();
 		}
-		currentTask = taskRepository.save(currentTask);
-		return convertEntityToDTO(currentTask);
+		return taskRepository.save(currentTask);
 	}
 	
 	@Override
+	@Transactional
 	public boolean deleteTask(long id) {
-		Task task = taskRepository.getOne(id);
-		if (task == null) {
-			return false;
+		List<Long> ids = new ArrayList<>();
+		ids.add(id);
+		
+		for (int i = 0; i < ids.size(); i++) {
+			List<Task> descendants = findDescendants(ids.get(i));
+			for (Task t: descendants) {
+				ids.add(t.getId());
+			}
 		}
-		taskRepository.delete(task);
+		
+		taskRepository.deleteByIdIn(ids);
 		return true;
 	}
 	
-	private Task convertDTOToEntity(TaskDTO dto) {
-		
-		if (dto == null) {
-			return null;
-		}
-		
-		Task task = new Task();
-		task.setName(dto.getName());
-		task.setDescription(dto.getDescription());
-		task.setMinutesEstimation(dto.getMinutesEstimation());
-		task.setMinutesInvested(dto.getMinutesInvested());
-		task.setDate(dto.getDate());
-		task.setDeadline(dto.getDeadline());
-		task.setStatus(dto.getStatus());
-		if (dto.getParentTaskId() != null) {
-			Task parentTask = taskRepository.getOne(dto.getParentTaskId());
-			if (parentTask == null) {
-				throw new ParentTaskNotFoundException();
-			}
-			task.setParentTask(parentTask);
-		}
-		return task;		
-	}
-	
-	private TaskDTO convertEntityToDTO(Task task) {
-		
-		if (task == null) {
-			return null;
-		}
-		
-		TaskDTO dto = new TaskDTO();
-		dto.setId(task.getId());
-		dto.setName(task.getName());
-		dto.setDescription(task.getDescription());
-		dto.setMinutesEstimation(task.getMinutesEstimation());
-		dto.setMinutesInvested(task.getMinutesInvested());
-		dto.setDate(task.getDate());
-		dto.setDeadline(task.getDeadline());
-		dto.setStatus(task.getStatus());
-		if (task.getParentTask() != null) {
-			dto.setParentTaskId(task.getParentTask().getId());
-		}
-		return dto;
-	}
-
 	@Override
-	public List<TaskDTO> searchTasks(TaskSearch taskSearch) {
-		List<Task> tasks = taskRepository.search(taskSearch);
-		return convertTaskstoDTOs(tasks);
+	public boolean taskExists(long id) {
+		return taskRepository.existsById(id);
 	}
 
-	private List<TaskDTO> convertTaskstoDTOs(List<Task> tasks) {
-		List<TaskDTO> dtos = new ArrayList<>();
-		for (Task task: tasks) {
-			dtos.add(convertEntityToDTO(task));
-		}
-		return dtos;
-	}
 }

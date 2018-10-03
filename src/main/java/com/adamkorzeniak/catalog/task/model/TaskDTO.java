@@ -13,7 +13,6 @@ public class TaskDTO {
 	private LocalDateTime deadline;
 	private String status;
 	private Long parentTaskId;
-	private String user;
 	
 	public TaskDTO() {
 	}
@@ -88,13 +87,5 @@ public class TaskDTO {
 
 	public void setParentTaskId(Long parentTaskId) {
 		this.parentTaskId = parentTaskId;
-	}
-
-	public String getUser() {
-		return user;
-	}
-
-	public void setUser(String user) {
-		this.user = user;
 	}
 }

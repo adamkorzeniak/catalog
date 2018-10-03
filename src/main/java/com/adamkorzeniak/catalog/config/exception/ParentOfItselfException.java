@@ -1,4 +1,4 @@
-package com.adamkorzeniak.catalog.exception;
+package com.adamkorzeniak.catalog.config.exception;
 
 public class ParentOfItselfException extends RuntimeException {
 

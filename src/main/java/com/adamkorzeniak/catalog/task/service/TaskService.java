@@ -2,20 +2,21 @@ package com.adamkorzeniak.catalog.task.service;
 
 import java.util.List;
 
-import com.adamkorzeniak.catalog.task.model.TaskDTO;
-import com.adamkorzeniak.catalog.task.model.TaskSearch;
+import com.adamkorzeniak.catalog.task.model.Task;
 
 public interface TaskService {
 
-	TaskDTO create(TaskDTO dto);
+	Task create(Task task);
 
-	List<TaskDTO> findAllTasks();
+	List<Task> findDescendants(long parentTaskId);
 
-	TaskDTO findTask(long taskId);
+	List<Task> findAllTasks();
 
-	TaskDTO updateTask(TaskDTO dto, long id);
+	Task findTask(long taskId);
 
-	boolean deleteTask(long id);
+	Task updateTask(long taskId, Task task);
 
-	List<TaskDTO> searchTasks(TaskSearch taskSearch);
+	boolean deleteTask(long taskId);
+
+	boolean taskExists(long id);
 }
